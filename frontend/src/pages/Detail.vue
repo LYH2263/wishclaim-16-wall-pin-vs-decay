@@ -2,13 +2,17 @@
   <div class="wall">
     <h1 class="serif">{{ w.title }}</h1>
     <p>{{ w.note }}</p>
-    <p class="tag">状态 {{ w.status }} · 认领人 {{ w.claimer || '—' }}</p>
+    <p class="tag">
+      状态 {{ w.status }} · 认领人 {{ w.claimer || '—' }}
+      <span v-if="w.pinned"> · {{ w.pin_active ? '📌 置顶中' : '📌 灰钉（仍占名额）' }}</span>
+    </p>
     <p v-if="err" class="err">{{ err }}</p>
     <input v-model="claimer" placeholder="你的名字" />
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button @click="claim">认领锁定</button>
       <button class="ghost" @click="release">释放</button>
       <button class="ghost" @click="fulfill">核销完成</button>
+      <button class="ghost" @click="togglePin">{{ w.pinned ? '卸钉' : '📌 钉到墙顶' }}</button>
     </div>
   </div>
 </template>
@@ -28,6 +32,14 @@ async function release() {
 }
 async function fulfill() {
   err.value=''; try { await api('/wishes/'+props.id+'/fulfill',{method:'POST',body:'{}'}); await load() } catch(e){ err.value=e.message }
+}
+async function togglePin() {
+  err.value=''
+  try {
+    await api('/wishes/'+props.id+(w.value.pinned ? '/unpin' : '/pin'),
+              {method:'POST', body:JSON.stringify({pinned_by:claimer.value})})
+    await load()
+  } catch(e){ err.value=e.message }
 }
 onMounted(load)
 </script>

@@ -36,3 +36,14 @@ def release_if_expired(status: str, expires_at: str | None, now: datetime) -> di
     if parse_ts(expires_at) <= now:
         return {"status": "open", "claimer": None, "claimed_at": None, "expires_at": None}
     return None
+
+def sweep_expired(c, now: datetime) -> int:
+    """Release expired claim locks in place. Returns how many were released."""
+    n = 0
+    for r in c.execute("SELECT * FROM wishes WHERE status='claimed'").fetchall():
+        rel = release_if_expired(r["status"], r["expires_at"], now)
+        if rel:
+            c.execute("UPDATE wishes SET status=?, claimer=?, claimed_at=?, expires_at=? WHERE id=?",
+                      (rel["status"], None, None, None, r["id"]))
+            n += 1
+    return n
