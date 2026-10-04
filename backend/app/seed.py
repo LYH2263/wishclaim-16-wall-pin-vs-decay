@@ -1,13 +1,15 @@
 from app.db import connect
+from app.modules import pin as pinstore
 
 def init_db():
     c = connect()
-    c.executescript("""
+    c.executescript(f"""
     CREATE TABLE IF NOT EXISTS wishes(
       id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, note TEXT, status TEXT,
       claimer TEXT, claimed_at TEXT, expires_at TEXT, data_quality TEXT
     );
     CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT);
+    {pinstore.DDL};
     """)
     if c.execute("SELECT COUNT(*) c FROM wishes").fetchone()["c"] == 0:
         c.executemany(
@@ -23,4 +25,7 @@ def init_db():
         c.execute("INSERT INTO settings(key,value) VALUES ('ttl_seconds','86400')")
         c.execute("INSERT INTO settings(key,value) VALUES ('wall_title','暖粉愿望墙')")
         c.commit()
+    # Migration for already-initialized DBs: never overwrite an operator-tuned value.
+    c.execute("INSERT OR IGNORE INTO settings(key,value) VALUES ('max_pins','3')")
+    c.commit()
     c.close()
